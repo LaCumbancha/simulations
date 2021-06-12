@@ -4,6 +4,7 @@ import enum
 import math
 import psutil
 import logging
+import argparse
 import numpy as np
 import pandas as pd
 from datetime import date, datetime
@@ -11,26 +12,32 @@ from datetime import date, datetime
 logger = logging.getLogger(name="Copa América 2021 Simulator")
 logging.basicConfig(format='%(name)s | %(asctime)s | %(levelname)s | %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
-# Load data
-matches = pd.read_csv('./Data/Results.csv')
+# Default values
+DEFAULT_SIMULATIONS = 10000000
+DEFAULT_INPUT_DATA = './data/matches.csv'
+DEFAULT_OUTPUT_DATA = './output/raw-data.json'
 
-# Update matches
-new_matches = df2 = pd.DataFrame(
-    [
-        ['2021-06-03', 'Bolivia', 'Venezuela', 3, 1, 'FIFA World Cup qualification', 'La Paz', 'Bolivia', False],
-        ['2021-06-03', 'Uruguay', 'Paraguay', 0, 0, 'FIFA World Cup qualification', 'Montevideo', 'Uruguay', False],
-        ['2021-06-03', 'Argentina', 'Chile', 1, 1, 'FIFA World Cup qualification', 'Santiago del Estero', 'Argentina', False],
-        ['2021-06-03', 'Peru', 'Colombia', 0, 3, 'FIFA World Cup qualification', 'Lima', 'Peru', False],
-        ['2021-06-04', 'Brazil', 'Ecuador', 2, 0, 'FIFA World Cup qualification', 'Porto Alegre', 'Brazil', False],
-        ['2021-06-08', 'Ecuador', 'Peru', 1, 2, 'FIFA World Cup qualification', 'Quito', 'Ecuador', False],
-        ['2021-06-08', 'Venezuela', 'Uruguay', 0, 0, 'FIFA World Cup qualification', 'Caracas', 'Venezuela', False],
-        ['2021-06-08', 'Colombia', 'Argentina', 2, 2, 'FIFA World Cup qualification', 'Barranquilla', 'Colombia', False],
-        ['2021-06-08', 'Paraguay', 'Brazil', 0, 2, 'FIFA World Cup qualification', 'Asunción', 'Paraguay', False],
-        ['2021-06-08', 'Chile', 'Bolivia', 1, 1, 'FIFA World Cup qualification', 'Santiago', 'Chile', False],
-    ], 
-    columns=['date', 'home_team', 'away_team', 'home_score', 'away_score', 'tournament', 'city', 'country', 'neutral']
-)
-matches = matches.append(new_matches)
+# Loading arguments
+parser = argparse.ArgumentParser(description='I/O data')
+parser.add_argument('--input', dest='input', type=str, help='Input data in JSON format')
+parser.add_argument('--output', dest='output', type=str, help='Output data in CSV format')
+parser.add_argument('--simulations', dest='simulations', type=int, help='Number of simulations')
+args = parser.parse_args()
+
+if args.input is None:
+    logger.warn(f'Missing input data. Setting default: {DEFAULT_INPUT_DATA}')
+    args.input = DEFAULT_JSON_INPUT
+
+if args.output is None:
+    logger.warn(f'Missing output data. Setting default: {DEFAULT_OUTPUT_DATA}')
+    args.output = DEFAULT_CSV_OUTPUT
+
+if args.simulations is None:
+    logger.warn(f'Missing simulations number. Setting default: {DEFAULT_SIMULATIONS}')
+    args.simulations = DEFAULT_SIMULATIONS
+
+# Load data
+matches = pd.read_csv(args.input)
 
 # Load teams
 CONMEBOL_TEAMS = {'Argentina': 'ARG', 'Brazil': 'BRA', 'Uruguay': 'URU', 'Bolivia': 'BOL', 'Paraguay': 'PAR', 'Chile': 'CHI', 'Peru': 'PER', 'Colombia': 'COL', 'Ecuador': 'ECU', 'Venezuela': 'VEN'}
@@ -374,22 +381,20 @@ def knockout_stage(matches):
     return winners
 
 # Write data
-JSON_FILE = "./Output/Predictions.csv"
 def write_data():
     try:
-        with open(JSON_FILE, "w") as outfile: 
+        with open(args.output, "w") as outfile: 
             json.dump(SIMULATION_RESULTS, outfile)
     except IOError:
         logger.error('Error writing JSON file.')
 
 
-SIMULATIONS = 4000000000
-SIMULATIONS_LOG_DELTA = int(SIMULATIONS/113)
-for iteration in range(0, SIMULATIONS):
+SIMULATIONS_LOG_DELTA = math.ceil(args.simulations/113)
+for iteration in range(0, args.simulations):
     if iteration % SIMULATIONS_LOG_DELTA == 0:
         write_data()
         ram = psutil.virtual_memory()
-        logger.info(f'Iteration: #{iteration}. CPU: {psutil.cpu_percent(percpu=True)}. RAM: {round((ram.total - ram.available)/1024**3, 1)}G/{round(ram.total/1024**3, 1)}G ({ram.percent}%). Status: {int(iteration*100/SIMULATIONS)}%.')
+        logger.info(f'Iteration: #{iteration}. CPU: {psutil.cpu_percent(percpu=True)}. RAM: {round((ram.total - ram.available)/1024**3, 1)}G/{round(ram.total/1024**3, 1)}G ({ram.percent}%). Status: {int(iteration*100/args.simulations)}%.')
 
     groupA_results = matches_simulations(MATCHES_GROUP_A)
     groupB_results = matches_simulations(MATCHES_GROUP_B)
@@ -450,23 +455,4 @@ for iteration in range(0, SIMULATIONS):
     SIMULATION_RESULTS[second_place]['2ND'] += 1
     SIMULATION_RESULTS[champion]['1ST'] += 1
 
-for country, simulations in SIMULATION_RESULTS.items():
-    SIMULATION_RESULTS[country]['GROUPS'] = round(simulations['GROUPS']/SIMULATIONS, 2)
-    SIMULATION_RESULTS[country]['QF'] = round(simulations['QF']/SIMULATIONS, 2)
-    SIMULATION_RESULTS[country]['4TH'] = round(simulations['4TH']/SIMULATIONS, 2)
-    SIMULATION_RESULTS[country]['3RD'] = round(simulations['3RD']/SIMULATIONS, 2)
-    SIMULATION_RESULTS[country]['2ND'] = round(simulations['2ND']/SIMULATIONS, 2)
-    SIMULATION_RESULTS[country]['1ST'] = round(simulations['1ST']/SIMULATIONS, 2)
-
-print()
-print('Final results:')
-print(f'ARG: {SIMULATION_RESULTS["ARG"]}')
-print(f'BOL: {SIMULATION_RESULTS["BOL"]}')
-print(f'BRA: {SIMULATION_RESULTS["BRA"]}')
-print(f'CHI: {SIMULATION_RESULTS["CHI"]}')
-print(f'COL: {SIMULATION_RESULTS["COL"]}')
-print(f'ECU: {SIMULATION_RESULTS["ECU"]}')
-print(f'PAR: {SIMULATION_RESULTS["PAR"]}')
-print(f'PER: {SIMULATION_RESULTS["PER"]}')
-print(f'URU: {SIMULATION_RESULTS["URU"]}')
-print(f'VEN: {SIMULATION_RESULTS["VEN"]}')
+write_data()

@@ -1,8 +1,10 @@
 # Imports
+import os
 import json
 import enum
 import math
 import psutil
+import pathlib
 import logging
 import argparse
 import numpy as np
@@ -381,6 +383,10 @@ def knockout_stage(matches):
     return winners
 
 # Write data
+output_folder = os.path.dirname(args.output)
+print(output_folder)
+pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True) 
+
 def write_data():
     try:
         with open(args.output, "w") as outfile: 

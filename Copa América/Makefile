@@ -11,9 +11,10 @@ INTERMEDIATE_DATA = "./output/raw-data.json"
 default: run
 
 build:
-	pip3 install psutil
 	pip3 install numpy
+	pip3 install psutil
 	pip3 install pandas
+	pip3 install pathlib
 	pip3 install argparse
 
 run:

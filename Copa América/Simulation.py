@@ -1,4 +1,5 @@
 # Imports
+import json
 import enum
 import math
 import psutil
@@ -7,11 +8,11 @@ import numpy as np
 import pandas as pd
 from datetime import date, datetime
 
-logger = logging.getLogger(name="Block builder")
-logging.basicConfig(format='%(name)s | %(asctime)s | [%(levelname)-8s] %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger(name="Copa América 2021 Simulator")
+logging.basicConfig(format='%(name)s | %(asctime)s | %(levelname)s | %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
 # Load data
-matches = pd.read_csv('./Results.csv')
+matches = pd.read_csv('./Data/Results.csv')
 
 # Update matches
 new_matches = df2 = pd.DataFrame(
@@ -219,7 +220,6 @@ class Goals(enum.Enum):
     GA = 9
     GD = 10
 
-SIMULATIONS = 100
 MATCHES_GROUP_A = ['BRA-VEN', 'COL-ECU', 'COL-VEN', 'BRA-PER', 'VEN-ECU', 'COL-PER', 'ECU-PER', 'BRA-COL', 'BRA-ECU', 'VEN-PER']
 MATCHES_GROUP_B = ['ARG-CHI', 'PAR-BOL', 'CHI-BOL', 'ARG-URU', 'URU-CHI', 'ARG-PAR', 'BOL-URU', 'CHI-PAR', 'BOL-ARG', 'URU-PAR']
 SIMULATION_RESULTS = {
@@ -373,11 +373,23 @@ def knockout_stage(matches):
     
     return winners
 
-SIMULATIONS_LOG_DELTA = int(SIMULATIONS/10)
+# Write data
+JSON_FILE = "./Output/Predictions.csv"
+def write_data():
+    try:
+        with open(JSON_FILE, "w") as outfile: 
+            json.dump(SIMULATION_RESULTS, outfile)
+    except IOError:
+        logger.error('Error writing JSON file.')
+
+
+SIMULATIONS = 4000000000
+SIMULATIONS_LOG_DELTA = int(SIMULATIONS/113)
 for iteration in range(0, SIMULATIONS):
     if iteration % SIMULATIONS_LOG_DELTA == 0:
+        write_data()
         ram = psutil.virtual_memory()
-        logger.info(f'Iteration: #{iteration}. CPU: {psutil.cpu_percent(percpu=True)}. RAM: {ram.total - ram.available}/{ram.total} ({ram.percent}). Status: ${int(SIMULATIONS/iteration)}.')
+        logger.info(f'Iteration: #{iteration}. CPU: {psutil.cpu_percent(percpu=True)}. RAM: {round((ram.total - ram.available)/1024**3, 1)}G/{round(ram.total/1024**3, 1)}G ({ram.percent}%). Status: {int(iteration*100/SIMULATIONS)}%.')
 
     groupA_results = matches_simulations(MATCHES_GROUP_A)
     groupB_results = matches_simulations(MATCHES_GROUP_B)
@@ -438,6 +450,15 @@ for iteration in range(0, SIMULATIONS):
     SIMULATION_RESULTS[second_place]['2ND'] += 1
     SIMULATION_RESULTS[champion]['1ST'] += 1
 
+for country, simulations in SIMULATION_RESULTS.items():
+    SIMULATION_RESULTS[country]['GROUPS'] = round(simulations['GROUPS']/SIMULATIONS, 2)
+    SIMULATION_RESULTS[country]['QF'] = round(simulations['QF']/SIMULATIONS, 2)
+    SIMULATION_RESULTS[country]['4TH'] = round(simulations['4TH']/SIMULATIONS, 2)
+    SIMULATION_RESULTS[country]['3RD'] = round(simulations['3RD']/SIMULATIONS, 2)
+    SIMULATION_RESULTS[country]['2ND'] = round(simulations['2ND']/SIMULATIONS, 2)
+    SIMULATION_RESULTS[country]['1ST'] = round(simulations['1ST']/SIMULATIONS, 2)
+
+print()
 print('Final results:')
 print(f'ARG: {SIMULATION_RESULTS["ARG"]}')
 print(f'BOL: {SIMULATION_RESULTS["BOL"]}')

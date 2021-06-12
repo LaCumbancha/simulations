@@ -130,3 +130,6 @@ dmypy.json
 
 # Output
 Copa América/output/
+
+# Mac
+**/.DS_Store

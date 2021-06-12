@@ -394,7 +394,7 @@ def write_data():
         logger.error('Error writing JSON file.')
 
 
-SIMULATIONS_LOG_DELTA = math.ceil(args.simulations/113)
+SIMULATIONS_LOG_DELTA = math.ceil(args.simulations/11.3)
 for iteration in range(0, args.simulations):
     if iteration % SIMULATIONS_LOG_DELTA == 0:
         write_data()

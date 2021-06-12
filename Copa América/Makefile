@@ -1,8 +1,7 @@
 SHELL := /bin/bash
 PWD := $(shell pwd)
 
-#SIMULATIONS = 10000000
-SIMULATIONS = 100
+SIMULATIONS = 10000000
 
 INPUT_DATA = "./data/matches.csv"
 OUTPUT_DATA = "./output/results.csv"

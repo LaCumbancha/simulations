@@ -384,7 +384,6 @@ def knockout_stage(matches):
 
 # Write data
 output_folder = os.path.dirname(args.output)
-print(output_folder)
 pathlib.Path(output_folder).mkdir(parents=True, exist_ok=True) 
 
 def write_data():
